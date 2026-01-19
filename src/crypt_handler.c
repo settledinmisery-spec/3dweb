@@ -28,10 +28,11 @@ int is_crypt_request(http_request *request)
 	int valid = 1;
 	int l = 0;
 	int ktype;
+	char *saveptr;
 
-	char *p = strtok(dup+1, "/");
+	char *p = strtok_r(dup+1, "/", &saveptr);
 
-	p = strtok(NULL, "/"); // "crypt/"
+	p = strtok_r(NULL, "/", &saveptr); // "crypt/"
 
 	while (p != NULL)
 	{
@@ -102,7 +103,7 @@ int is_crypt_request(http_request *request)
 				valid = 0;
 				break;
 		}
-		p = strtok(NULL, "/");
+		p = strtok_r(NULL, "/", &saveptr);
 	}
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -145,10 +146,11 @@ static int do_crypto_request(char *path, char *outbuf)
 	int param = 0;
 	int ofs = 0;
 	int l = 0;
+	char *saveptr;
 
-	char *p = strtok(dup+1, "/");
+	char *p = strtok_r(dup+1, "/", &saveptr);
 
-	p = strtok(NULL, "/"); // "crypt/"
+	p = strtok_r(NULL, "/", &saveptr); // "crypt/"
 
 	while (p != NULL)
 	{
@@ -186,7 +188,7 @@ static int do_crypto_request(char *path, char *outbuf)
 			default:
 				break;
 		}
-		p = strtok(NULL, "/");
+		p = strtok_r(NULL, "/", &saveptr);
 	}
 
 	const char * algos[6] = {"CBC Enc", "CBC Dec", "CTR Enc", "CTR Dec", "CCM Enc", "CCM Dec"};

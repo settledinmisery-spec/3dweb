@@ -2,6 +2,9 @@
 #include <3ds.h>
 #include <stdio.h>
 #include <string.h>
+
+SystemConfig sys_conf;
+
 void manual(int page) {
 	const char *manual[8];
 	//TODO: Move manual pages into handlers
@@ -19,6 +22,21 @@ void manual(int page) {
 }
 int	main(int ac, char **av)
 {
+    // --- SMART DETECTION START ---
+    APT_CheckNew3DS(&sys_conf.is_new_3ds);
+
+    if (sys_conf.is_new_3ds) {
+        // NEW 3DS: Gib ihm alles was wir haben!
+        osSetSpeedupEnable(true); // 804 MHz Modus
+        sys_conf.stack_size = 64 * 1024;      // 64KB Stack für Threads
+        sys_conf.socket_buffer_size = 32 * 1024; // 32KB TCP Buffer
+    } else {
+        // OLD 3DS: Ressourcen sparen
+        osSetSpeedupEnable(false);
+        sys_conf.stack_size = 16 * 1024;      // 16KB Stack (reicht für HTTP Parsing)
+        sys_conf.socket_buffer_size = 4 * 1024;  // 4KB TCP Buffer (Standard)
+    }
+    // --- SMART DETECTION ENDE ---
 	
 	int port = 8081;
 	int manualpage = 0;

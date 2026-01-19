@@ -4,11 +4,6 @@
 
 This project is a heavily modified and modernized continuation of `3ds-httpd` by dimaguy.
 
-## Why 3DWEB?
-
-*   **Performance:** Written in native C with manual memory management for minimal overhead.
-*   **Multithreading:** Utilizes the 3DS's multi-core architecture to handle multiple requests simultaneously without blocking.
-*   **Modern Web Standards:** Correctly handles MIME types (CSS, JS, Images), allowing modern websites to render correctly on client browsers.
 
 ## Features
 

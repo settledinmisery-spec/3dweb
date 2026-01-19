@@ -55,6 +55,6 @@ make
 ## Credits
 
 *   **Original Author:** [dimaguy](https://github.com/dimaguy/3ds-httpd)
-*   **Maintainer:** [Rawrvlxx](https://github.com/settledinmisery-spec)
+*   **ME:** [Rawrvlxx](https://github.com/settledinmisery-spec)
 
 Licensed under the MIT License.

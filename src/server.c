@@ -17,9 +17,14 @@ void socShutdown()
 {
     printTop("waiting for socExit...\n");
     socExit();
+    // Free the socket buffer allocated in init_network
+    if (socket_buffer != NULL) {
+        free(socket_buffer);
+        socket_buffer = NULL;
+    }
 }
 
-void init(int port)
+static void init_system()
 {
     hidInit(); // input
     psInit(); // ps, for AES
@@ -30,6 +35,10 @@ void init(int port)
     fsInit();
     consoleDebugInit(debugDevice_CONSOLE);
     init_handlers();
+}
+
+static void init_network()
+{
     socket_buffer = (u32*)memalign(SOC_ALIGN, SOC_BUFFERSIZE);
     ndmuInit();
     aptSetSleepAllowed(false);
@@ -43,35 +52,10 @@ void init(int port)
     // Init soc:u service
     if ((ret = socInit(socket_buffer, SOC_BUFFERSIZE)) != 0)
         failExit("Service initialization failed! (code: 0x%08X)\n", (unsigned int)ret);
+}
 
-    // Make sure the struct is clear
-    memset(&data, 0, sizeof(data));
-    data.client_id = -1;
-    data.server_id = -1;
-    data.server_id = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
-
-    // Is socket accessible?
-    if (data.server_id < 0)
-        failExit("socket: %s (code: %d)\n", strerror(errno), errno);
-
-    // --- OPTIMIZATION START ---
-    // Dynamische Buffer-Größe setzen
-    setsockopt(data.server_id, SOL_SOCKET, SO_SNDBUF, &sys_conf.socket_buffer_size, sizeof(sys_conf.socket_buffer_size));
-    setsockopt(data.server_id, SOL_SOCKET, SO_RCVBUF, &sys_conf.socket_buffer_size, sizeof(sys_conf.socket_buffer_size));
-
-    if (sys_conf.is_new_3ds) {
-        printTop("System: New 3DS (High Performance Mode)\n");
-    } else {
-        printTop("System: Old 3DS (Legacy Mode)\n");
-    }
-    // --- OPTIMIZATION ENDE ---
-
-    // Init server_addr on default address and port 8081
-    data.server_addr.sin_family = AF_INET;
-    data.server_addr.sin_port = htons(port);
-    data.server_addr.sin_addr.s_addr = gethostid();
-    data.client_length = sizeof(data.client_addr);
-
+static void init_filesystem()
+{
     // Create directory and index.html file on SD card
     const char *directory = "Websites"; 
     const char *index_html = "index.html"; 
@@ -113,6 +97,37 @@ void init(int port)
             printTop("index.html file created: %s\n", index_html);
         }
     }
+}
+
+static void init_server_socket(int port)
+{
+    // Make sure the struct is clear
+    memset(&data, 0, sizeof(data));
+    data.client_id = -1;
+    data.server_id = -1;
+    data.server_id = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+
+    // Is socket accessible?
+    if (data.server_id < 0)
+        failExit("socket: %s (code: %d)\n", strerror(errno), errno);
+
+    // --- OPTIMIZATION START ---
+    // Dynamische Buffer-Größe setzen
+    setsockopt(data.server_id, SOL_SOCKET, SO_SNDBUF, &sys_conf.socket_buffer_size, sizeof(sys_conf.socket_buffer_size));
+    setsockopt(data.server_id, SOL_SOCKET, SO_RCVBUF, &sys_conf.socket_buffer_size, sizeof(sys_conf.socket_buffer_size));
+
+    if (sys_conf.is_new_3ds) {
+        printTop("System: New 3DS (High Performance Mode)\n");
+    } else {
+        printTop("System: Old 3DS (Legacy Mode)\n");
+    }
+    // --- OPTIMIZATION ENDE ---
+
+    // Init server_addr on default address and port 8081
+    data.server_addr.sin_family = AF_INET;
+    data.server_addr.sin_port = htons(port);
+    data.server_addr.sin_addr.s_addr = gethostid();
+    data.client_length = sizeof(data.client_addr);
 
     // Print network info
     printTop("Server is starting - http://%s:%i/\n", inet_ntoa(data.server_addr.sin_addr),port);
@@ -130,6 +145,14 @@ void init(int port)
         failExit("listen: %s (code: %d)\n", strerror(errno), errno);
     data.running = 1;
     printTop("Ready...\n");
+}
+
+void init(int port)
+{
+    init_system();
+    init_network();
+    init_filesystem();
+    init_server_socket(port);
 }
 
 int loop()

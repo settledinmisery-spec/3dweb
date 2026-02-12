@@ -33,7 +33,7 @@ typedef struct {
 
 extern SystemConfig sys_conf; // Global verfügbar machen
 
-void init();
+void init(int port);
 int loop();
 void destroy();
 void start_connection_thread(http_server *server_template, s32 client_id, struct sockaddr_in client_addr);

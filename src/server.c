@@ -8,7 +8,6 @@
 static u32 *socket_buffer = NULL;
 static http_server data;
 http_server *app_data = &data;
-static int ret;
 // static char payload[4098]; // REMOVED: Not thread safe, moved to connection.c
 PrintConsole topScreen, bottomScreen;
 LightLock printLock; // Definition of the lock
@@ -50,6 +49,7 @@ static void init_network()
         failExit("Socket buffer allocation failed!\n");
 
     // Init soc:u service
+    int ret;
     if ((ret = socInit(socket_buffer, SOC_BUFFERSIZE)) != 0)
         failExit("Service initialization failed! (code: 0x%08X)\n", (unsigned int)ret);
 }
@@ -132,6 +132,7 @@ static void init_server_socket(int port)
     // Print network info
     printTop("Server is starting - http://%s:%i/\n", inet_ntoa(data.server_addr.sin_addr),port);
 
+    int ret;
     if ((ret = bind(data.server_id, (struct sockaddr *) &data.server_addr, sizeof(data.server_addr))))
     {
         close(data.server_id);

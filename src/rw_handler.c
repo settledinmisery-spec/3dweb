@@ -223,7 +223,7 @@ http_response *get_write_handler_response(http_request *request)
 	const char content_type[] = "Content-Type: text/html\r\n";
 	response->content_type = memdup(content_type, sizeof(content_type));
 	char	*payload = memalloc(1024 * sizeof(char));
-	sprintf(payload, "OK");
+	snprintf(payload, 1024, "OK");
 	response->payload = payload;
 	response->payload_len = strlen(response->payload);
 	return response;

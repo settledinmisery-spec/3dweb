@@ -189,3 +189,44 @@ char *get_browser(char *agent)
 		browser = "Opera";
 	return browser;
 }
+
+#include "mem_utils.h"
+#include <sys/socket.h>
+
+void read_full_body(http_request *req)
+{
+	if (req->full_body != NULL || req->content_length <= 0)
+		return;
+
+	req->full_body = (char*)memalloc(req->content_length + 1);
+	if (!req->full_body)
+		return;
+
+	int total_read = 0;
+	if (req->initial_body_len > 0) {
+		int to_copy = req->initial_body_len > req->content_length ? req->content_length : req->initial_body_len;
+		memcpy(req->full_body, req->body_start, to_copy);
+		total_read = to_copy;
+	}
+
+	while (total_read < req->content_length) {
+		int bytes_to_read = req->content_length - total_read;
+		int chunk_size = bytes_to_read > 4096 ? 4096 : bytes_to_read;
+		ssize_t ret = recv(req->client_id, req->full_body + total_read, chunk_size, 0);
+		if (ret <= 0)
+			break;
+		total_read += ret;
+	}
+	req->full_body[total_read] = '\0';
+}
+
+#include "cJSON.h"
+
+struct cJSON *get_json_body(http_request *req)
+{
+	read_full_body(req);
+	if (!req->full_body)
+		return NULL;
+
+	return cJSON_Parse(req->full_body);
+}

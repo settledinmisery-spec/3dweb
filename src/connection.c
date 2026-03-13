@@ -148,9 +148,11 @@ void handle_client(thread_context *ctx)
     request->payload = payload;
     request->client_id = ctx->client_id;
     request->content_length = 0;
+    request->content_type = NULL;
     request->body_start = NULL;
     request->initial_body_len = 0;
     request->if_modified_since = NULL;
+    request->full_body = NULL;
 
     // Find Body Separator (\r\n\r\n)
     char *body_sep = strstr(payload, "\r\n\r\n");
@@ -184,6 +186,8 @@ void handle_client(thread_context *ctx)
             request->content_length = atol(line + 16);
         else if (startWith(line, "If-Modified-Since: "))
             request->if_modified_since = line + 19;
+        else if (startWith(line, "Content-Type: "))
+            request->content_type = line + 14;
             
         line = strtok_r(NULL, "\r\n", &saveptr);
     }
@@ -230,6 +234,8 @@ void handle_client(thread_context *ctx)
     if (handler && handler->after_response != NULL)
         handler->after_response(&ctx->server_ctx, request);
 
+    if (request->full_body)
+        memdel((void**)&request->full_body);
     memdel((void**)&request);
     free(payload);
     

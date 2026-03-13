@@ -10,5 +10,9 @@ void url_decode(char *dst, const char *src);
 char *get_browser(char *agent);
 char *get_request_name(http_request_type type);
 char *get_http_code_name(int code);
+void read_full_body(http_request *req);
+
+struct cJSON;
+struct cJSON *get_json_body(http_request *req);
 
 #endif

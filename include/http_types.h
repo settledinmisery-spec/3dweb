@@ -38,9 +38,11 @@ typedef struct
 	char *payload;
 	s32 client_id;
 	long content_length;
+	char *content_type;
 	char *body_start;
 	int initial_body_len;
 	char *if_modified_since;
+	char *full_body;
 } http_request;
 
 typedef struct

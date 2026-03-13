@@ -3,6 +3,8 @@
 #include "path_utils.h"
 #include "http_utils.h"
 #include "mem_utils.h"
+#include "multipart.h"
+#include "cJSON.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -178,6 +180,56 @@ http_response *handle_file_upload(http_request *request, const char *path) {
             response->payload_len = sizeof("403 Forbidden: Writing to this path is not allowed.") - 1;
             return response;
         }
+    }
+
+    if (request->content_type && startWith(request->content_type, "multipart/form-data")) {
+        multipart_form *form = parse_multipart(request);
+        if (!form) {
+            response->code = 400;
+            response->payload = memdup("400 Bad Request: Invalid multipart data.", sizeof("400 Bad Request: Invalid multipart data.") - 1);
+            response->payload_len = sizeof("400 Bad Request: Invalid multipart data.") - 1;
+            return response;
+        }
+
+        multipart_part *p = form->parts;
+        int files_written = 0;
+        while (p) {
+            if (p->data && p->data_len > 0) {
+                char final_path[1024];
+                if (path[strlen(path) - 1] == '/') {
+                    snprintf(final_path, sizeof(final_path), "sdmc:%s%s", path, p->filename ? p->filename : "upload.bin");
+                } else {
+                    snprintf(final_path, sizeof(final_path), "sdmc:%s", path);
+                }
+
+                if (p->filename && contains_path_traversal(p->filename)) {
+                    p = p->next;
+                    continue;
+                }
+
+                remove(final_path);
+                FILE *f = fopen(final_path, "wb");
+                if (f) {
+                    fwrite(p->data, 1, p->data_len, f);
+                    fclose(f);
+                    files_written++;
+                }
+            }
+            p = p->next;
+        }
+
+        free_multipart(form);
+        
+        if (files_written > 0) {
+            response->code = 201;
+            response->payload = memdup("201 Created (Multipart)", sizeof("201 Created (Multipart)") - 1);
+            response->payload_len = sizeof("201 Created (Multipart)") - 1;
+        } else {
+            response->code = 400;
+            response->payload = memdup("400 Bad Request: No files found in multipart.", sizeof("400 Bad Request: No files found in multipart.") - 1);
+            response->payload_len = sizeof("400 Bad Request: No files found in multipart.") - 1;
+        }
+        return response;
     }
 
     remove(full_path); // Workaround for 3DS FATfs not always truncating with "wb"

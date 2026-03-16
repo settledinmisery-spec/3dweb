@@ -22,8 +22,39 @@ const char* get_mime_type(const char *path) {
 	if (strcasecmp(ext, ".xml") == 0) return "text/xml";
 	if (strcasecmp(ext, ".pdf") == 0) return "application/pdf";
 	
+	// Additional Images
+	if (strcasecmp(ext, ".svg") == 0) return "image/svg+xml";
+	if (strcasecmp(ext, ".bmp") == 0) return "image/bmp";
+	if (strcasecmp(ext, ".tiff") == 0) return "image/tiff";
+	if (strcasecmp(ext, ".tif") == 0) return "image/tiff";
+
+	// Additional Text / Documents
+	if (strcasecmp(ext, ".csv") == 0) return "text/csv";
+	if (strcasecmp(ext, ".md") == 0) return "text/markdown";
+	if (strcasecmp(ext, ".rtf") == 0) return "application/rtf";
+
+	// Archives
+	if (strcasecmp(ext, ".zip") == 0) return "application/zip";
+	if (strcasecmp(ext, ".tar") == 0) return "application/x-tar";
+	if (strcasecmp(ext, ".gz") == 0) return "application/gzip";
+	if (strcasecmp(ext, ".bz2") == 0) return "application/x-bzip2";
+	if (strcasecmp(ext, ".7z") == 0) return "application/x-7z-compressed";
+	if (strcasecmp(ext, ".rar") == 0) return "application/vnd.rar";
+
+	// Fonts
+	if (strcasecmp(ext, ".woff") == 0) return "font/woff";
+	if (strcasecmp(ext, ".woff2") == 0) return "font/woff2";
+	if (strcasecmp(ext, ".ttf") == 0) return "font/ttf";
+	if (strcasecmp(ext, ".otf") == 0) return "font/otf";
+	if (strcasecmp(ext, ".eot") == 0) return "application/vnd.ms-fontobject";
+
+	// Web / Other
+	if (strcasecmp(ext, ".wasm") == 0) return "application/wasm";
+
 	// Audio types
 	if (strcasecmp(ext, ".ogg") == 0) return "audio/ogg";
+	if (strcasecmp(ext, ".m4a") == 0) return "audio/mp4";
+	if (strcasecmp(ext, ".flac") == 0) return "audio/flac";
 	if (strcasecmp(ext, ".mp3") == 0) return "audio/mpeg";
 	if (strcasecmp(ext, ".wav") == 0) return "audio/wav";
 	

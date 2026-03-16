@@ -150,6 +150,7 @@ void handle_client(thread_context *ctx)
     request->content_length = 0;
     request->body_start = NULL;
     request->initial_body_len = 0;
+    request->if_modified_since = NULL;
 
     // Find Body Separator (\r\n\r\n)
     char *body_sep = strstr(payload, "\r\n\r\n");
@@ -181,6 +182,8 @@ void handle_client(thread_context *ctx)
             request->agent = line + 12;
         else if (startWith(line, "Content-Length: "))
             request->content_length = atol(line + 16);
+        else if (startWith(line, "If-Modified-Since: "))
+            request->if_modified_since = line + 19;
             
         line = strtok_r(NULL, "\r\n", &saveptr);
     }

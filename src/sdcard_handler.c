@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -288,38 +289,62 @@ http_response *get_sdcard_response(http_request *request)
 	http_response *response = memalloc(sizeof(http_response));
     response->keep_alive = 0; // Initialize
     response->additional_headers = NULL; // Initialize
-	FILE *fptr = fopen(realPath, "rb");
-	
-	if (fptr == NULL) {
-		response->code = 404;
-		char msg[1024];
-		snprintf(msg, sizeof(msg), "404 Not Found (File): '%s'", realPath);
-		response->payload = memdup(msg, strlen(msg));
-		response->payload_len = strlen(msg);
-		const char ct[] = "Content-Type: text/plain\r\n";
-		response->content_type = memdup(ct, sizeof(ct));
-	} else {
-		fseek(fptr, 0, SEEK_END);
-		size_t fileSize = ftell(fptr);
-		fclose(fptr); // Close immediately, will be reopened for streaming
+    response->stream_file_path = NULL;
+    response->content_type = NULL;
 
-		response->payload = NULL; // No in-memory payload for streaming
-		response->payload_len = fileSize;
-		response->stream_file_path = memdup(realPath, strlen(realPath) + 1); // Store path for streaming
-		response->code = 200;
-		
-		const char *mime = get_mime_type(realPath);
-		char ct_buf[128];
-		snprintf(ct_buf, sizeof(ct_buf), "Content-Type: %s\r\n", mime);
-		response->content_type = memdup(ct_buf, strlen(ct_buf) + 1);
+	if (stat(realPath, &st) == 0) {
+		char last_modified_str[128];
+		struct tm tm_info;
+		gmtime_r(&st.st_mtime, &tm_info);
+		strftime(last_modified_str, sizeof(last_modified_str), "%a, %d %b %Y %H:%M:%S GMT", &tm_info);
 
-        response->additional_headers = memdup("Cache-Control: public, max-age=3600\r\n", strlen("Cache-Control: public, max-age=3600\r\n") + 1);
+		if (request->if_modified_since != NULL && strcmp(request->if_modified_since, last_modified_str) == 0) {
+			response->code = 304; // Not Modified
+			response->payload = NULL;
+			response->payload_len = 0;
+			response->keep_alive = 1;
+
+			char headers_buf[256];
+			snprintf(headers_buf, sizeof(headers_buf), "Cache-Control: public, max-age=3600\r\nLast-Modified: %s\r\n", last_modified_str);
+			response->additional_headers = memdup(headers_buf, strlen(headers_buf) + 1);
+
+			return response;
+		}
+
+		FILE *fptr = fopen(realPath, "rb");
+		if (fptr != NULL) {
+			fseek(fptr, 0, SEEK_END);
+			size_t fileSize = ftell(fptr);
+			fclose(fptr); // Close immediately, will be reopened for streaming
+
+			response->payload = NULL; // No in-memory payload for streaming
+			response->payload_len = fileSize;
+			response->stream_file_path = memdup(realPath, strlen(realPath) + 1); // Store path for streaming
+			response->code = 200;
+
+			const char *mime = get_mime_type(realPath);
+			char ct_buf[128];
+			snprintf(ct_buf, sizeof(ct_buf), "Content-Type: %s\r\n", mime);
+			response->content_type = memdup(ct_buf, strlen(ct_buf) + 1);
+
+			char headers_buf[256];
+			snprintf(headers_buf, sizeof(headers_buf), "Cache-Control: public, max-age=3600\r\nLast-Modified: %s\r\n", last_modified_str);
+			response->additional_headers = memdup(headers_buf, strlen(headers_buf) + 1);
+
+			// Set keep_alive true for successful file downloads for performance
+			response->keep_alive = 1;
+			return response;
+		}
 	}
-    
-    // Set keep_alive true for successful file downloads for performance
-    if (response->code == 200) {
-        response->keep_alive = 1;
-    }
+
+	// 404 Fallback
+	response->code = 404;
+	char msg[1024];
+	snprintf(msg, sizeof(msg), "404 Not Found (File): '%s'", realPath);
+	response->payload = memdup(msg, strlen(msg));
+	response->payload_len = strlen(msg);
+	const char ct[] = "Content-Type: text/plain\r\n";
+	response->content_type = memdup(ct, sizeof(ct));
 	
 	return response;    
 }

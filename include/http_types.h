@@ -40,6 +40,7 @@ typedef struct
 	long content_length;
 	char *body_start;
 	int initial_body_len;
+	char *if_modified_since;
 } http_request;
 
 typedef struct

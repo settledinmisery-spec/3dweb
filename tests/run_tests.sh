@@ -11,3 +11,7 @@ rm tests/test_sdcard
 gcc -I./tests/include -I./include -o tests/test_rw tests/test_rw_handler.c
 ./tests/test_rw
 rm tests/test_rw
+
+gcc -I./tests/include -I./include -o tests/test_mime tests/test_mime_type.c
+./tests/test_mime
+rm tests/test_mime

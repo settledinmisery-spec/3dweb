@@ -21,11 +21,11 @@ static void *memmem_custom(const void *l, size_t l_len, const void *s, size_t s_
 }
 
 static char *extract_attribute(const char *header, const char *attr_name) {
-    char *pos = strstr(header, attr_name);
+    char search_str[64];
+    snprintf(search_str, sizeof(search_str), "%s=\"", attr_name);
+    char *pos = strstr(header, search_str);
     if (!pos) return NULL;
-    pos += strlen(attr_name);
-    if (*pos != '=' || *(pos + 1) != '"') return NULL;
-    pos += 2;
+    pos += strlen(search_str);
     char *end = strchr(pos, '"');
     if (!end) return NULL;
     size_t len = end - pos;
@@ -80,10 +80,15 @@ multipart_form *parse_multipart(http_request *req) {
         
         size_t header_len = header_end - curr;
         char *headers = memalloc(header_len + 1);
+        if (!headers) break; // Safe fallback on OOM
         memcpy(headers, curr, header_len);
         headers[header_len] = '\0';
 
         multipart_part *part = memalloc(sizeof(multipart_part));
+        if (!part) {
+            memdel((void**)&headers);
+            break; // Safe fallback on OOM
+        }
         memset(part, 0, sizeof(multipart_part));
         
         char *cd_pos = strstr(headers, "Content-Disposition:");
@@ -116,9 +121,11 @@ multipart_form *parse_multipart(http_request *req) {
             if (data_end > curr && *(data_end - 1) == '\r') data_end--;
             
             part->data_len = data_end - curr;
-            part->data = memalloc(part->data_len + 1);
-            memcpy(part->data, curr, part->data_len);
-            part->data[part->data_len] = '\0'; 
+            part->data = curr; // Point directly into full_body to save massive amounts of memory
+            // Optionally null-terminate within full_body, overwriting the boundary/CRLF safely
+            if (curr + part->data_len < req->full_body + req->content_length) {
+                curr[part->data_len] = '\0';
+            }
             
             curr = next_b; 
             remaining = req->content_length - (curr - req->full_body);
@@ -145,7 +152,7 @@ void free_multipart(multipart_form *form) {
         if (p->name) memdel((void**)&p->name);
         if (p->filename) memdel((void**)&p->filename);
         if (p->content_type) memdel((void**)&p->content_type);
-        if (p->data) memdel((void**)&p->data);
+        // part->data is a pointer into req->full_body, so it must not be freed here!
         memdel((void**)&p);
         p = next;
     }
